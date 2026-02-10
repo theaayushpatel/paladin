@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "portfolios": [
+    {
+      "daoName": "Example DAO",
+      "daoAddress": "0x0000000000000000000000000000000000000000",
+      "protocols": [
+        {
+          "name": "Vulnerable Protocol",
+          "address": "0x0000000000000000000000000000000000000000",
+          "chain": "arbitrum-sepolia",
+          "tvl": "1000000",
+          "criticality": "high",
+          "withdrawalAddress": "0x0000000000000000000000000000000000000000"
+        }
+      ]
+    }
+  ],
+  "riskThresholds": {
+    "critical": {
+      "min": 9,
+      "max": 10,
+      "action": "emergency_withdraw",
+      "withdrawalPercent": 100
+    },
+    "high": {
+      "min": 7,
+      "max": 8,
+      "action": "partial_withdraw",
+      "withdrawalPercent": 80
+    },
+    "medium": {
+      "min": 5,
+      "max": 6,
+      "action": "alert_governance",
+      "withdrawalPercent": 0
+    },
+    "low": {
+      "min": 3,
+      "max": 4,
+      "action": "enhanced_monitoring",
+      "withdrawalPercent": 0
+    }
+  },
+  "scanConfig": {
+    "similarityThreshold": 0.7,
+    "confidenceThreshold": 0.8,
+    "cooldownPeriod": 300,
+    "maxRetries": 3
+  }
+}

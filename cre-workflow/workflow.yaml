@@ -1,0 +1,70 @@
+# Chainlink CRE Workflow Configuration
+# Orchestrates Paladin Protocol's autonomous defense system
+
+name: paladin-defense-workflow
+version: 1.0.0
+description: Autonomous DeFi exploit detection and response
+
+# Trigger configuration
+triggers:
+  - type: blockchain
+    chain: arbitrum-sepolia
+    event: newBlock
+    interval: 12 # seconds
+
+# Workflow steps
+steps:
+  # Step 1: Monitor for exploits
+  - name: exploit-detection
+    type: compute
+    runtime: nodejs
+    entrypoint: src/detection/exploitDetector.js
+    function: detectExploits
+    retry: 3
+    timeout: 30
+    
+  # Step 2: AI Analysis (conditional)
+  - name: ai-analysis
+    type: compute
+    runtime: nodejs
+    entrypoint: src/analysis/aiAnalyzer.js
+    function: analyzeExploit
+    condition: ${{ steps.exploit-detection.output.suspiciousCount > 0 }}
+    retry: 3
+    timeout: 60
+    
+  # Step 3: Portfolio Scan (conditional)
+  - name: portfolio-scan
+    type: compute
+    runtime: nodejs
+    entrypoint: src/scanner/portfolioScanner.js
+    function: scanPortfolio
+    condition: ${{ steps.ai-analysis.output.confidence > 0.8 }}
+    retry: 3
+    timeout: 90
+    
+  # Step 4: Execute Response (conditional)
+  - name: execute-response
+    type: compute
+    runtime: nodejs
+    entrypoint: src/response/responseExecutor.js
+    function: executeResponse
+    condition: ${{ steps.portfolio-scan.output.criticalCount > 0 }}
+    retry: 3
+    timeout: 120
+
+# Environment variables (references .env)
+env:
+  - ALCHEMY_API_KEY
+  - ANTHROPIC_API_KEY
+  - ETHERSCAN_API_KEY
+  - ARBISCAN_API_KEY
+  - DEPLOYER_PRIVATE_KEY
+  - GUARDIAN_ADDRESS
+  - RISK_REGISTRY_ADDRESS
+  - ARBITRUM_SEPOLIA_RPC
+
+# Resource limits
+resources:
+  memory: 512MB
+  cpu: 1

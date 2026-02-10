@@ -1,0 +1,33 @@
+{
+  "name": "paladin-cre-workflow",
+  "version": "1.0.0",
+  "description": "Chainlink CRE workflow for Paladin Protocol autonomous defense",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test:detector": "node src/detection/exploitDetector.js",
+    "test:analyzer": "node src/analysis/aiAnalyzer.js",
+    "test:scanner": "node src/scanner/portfolioScanner.js",
+    "test:executor": "node src/response/responseExecutor.js",
+    "deploy": "cre deploy workflow.yaml --network arbitrum-sepolia",
+    "logs": "cre logs --network arbitrum-sepolia"
+  },
+  "keywords": [
+    "defi",
+    "security",
+    "chainlink",
+    "cre",
+    "ai",
+    "exploit-detection"
+  ],
+  "author": "Paladin Protocol",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

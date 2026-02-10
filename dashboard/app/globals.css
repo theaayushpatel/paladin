@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paladin-blue: #1a2742;
+  --paladin-silver: #c0c5ce;
+  --paladin-gold: #d4af37;
+}
+
+body {
+  @apply bg-paladin-blue text-paladin-silver;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply text-paladin-gold;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-paladin-blue-dark;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-paladin-gold rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-paladin-gold opacity-80;
+}
