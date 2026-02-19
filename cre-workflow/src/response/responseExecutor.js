@@ -6,9 +6,72 @@
  */
 
 import { ethers } from 'ethers';
+import { readFile } from 'fs/promises';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+// Guardian contract ABI (minimal interface needed)
+const GUARDIAN_ABI = [
+    'function emergencyWithdraw(address protocol, address token, uint256 amount, uint8 riskLevel) external',
+    'function lastWithdrawal(address) view returns (uint256)',
+    'function cooldownPeriod() view returns (uint256)'
+];
+
+// Risk level enum mapping
+const RiskLevel = {
+    LOW: 0,
+    MEDIUM: 1,
+    HIGH: 2,
+    CRITICAL: 3
+};
+
+/**
+ * Converts risk score to Guardian RiskLevel enum
+ * @param {number} riskScore - Risk score from 1-10
+ * @returns {number} RiskLevel enum value
+ */
+function convertToRiskLevel(riskScore) {
+    if (riskScore >= 9) return RiskLevel.CRITICAL;
+    if (riskScore >= 7) return RiskLevel.HIGH;
+    if (riskScore >= 5) return RiskLevel.MEDIUM;
+    return RiskLevel.LOW;
+}
+
+/**
+ * Checks if protocol is in cooldown period
+ * @param {Object} guardian - Guardian contract instance
+ * @param {string} protocolAddress - Protocol address to check
+ * @returns {boolean} True if in cooldown
+ */
+async function isInCooldown(guardian, protocolAddress) {
+    try {
+        const lastWithdrawal = await guardian.lastWithdrawal(protocolAddress);
+        const cooldownPeriod = await guardian.cooldownPeriod();
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+        if (lastWithdrawal.toString() === '0') return false;
+        
+        const timeSinceLastWithdrawal = currentTime - parseInt(lastWithdrawal.toString());
+        return timeSinceLastWithdrawal < parseInt(cooldownPeriod.toString());
+    } catch (error) {
+        console.error('Error checking cooldown:', error.message);
+        return true; // Assume in cooldown if check fails
+    }
+}
+
+/**
+ * Gets token balance from protocol
+ * @param {Object} provider - Ethers provider
+ * @param {string} tokenAddress - Token contract address
+ * @param {string} protocolAddress - Protocol holding the tokens
+ * @returns {bigint} Token balance
+ */
+async function getTokenBalance(provider, tokenAddress, protocolAddress) {
+    const tokenABI = ['function balanceOf(address) view returns (uint256)'];
+    const tokenContract = new ethers.Contract(tokenAddress, tokenABI, provider);
+    return await tokenContract.balanceOf(protocolAddress);
+}
 
 /**
  * Executes emergency response for vulnerable protocols
@@ -16,13 +79,188 @@ dotenv.config();
  * @returns {Object} Execution results
  */
 export async function executeResponse(riskAssessments) {
-    // To be implemented
     console.log('⚔️  The Crusade mobilizes...');
-    return {};
+    
+    if (!riskAssessments || riskAssessments.length === 0) {
+        console.log('No risk assessments to process');
+        return { 
+            executed: [],
+            skipped: [],
+            failed: []
+        };
+    }
+    
+    try {
+        // Setup provider and signer
+        const rpcUrl = process.env.ARBITRUM_SEPOLIA_RPC || process.env.RPC_URL;
+        const privateKey = process.env.CRE_WORKFLOW_PRIVATE_KEY || process.env.DEPLOYER_PRIVATE_KEY;
+        const guardianAddress = process.env.GUARDIAN_ADDRESS;
+        
+        if (!rpcUrl || !privateKey || !guardianAddress) {
+            throw new Error('Missing required environment variables: RPC_URL, PRIVATE_KEY, or GUARDIAN_ADDRESS');
+        }
+        
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const signer = new ethers.Wallet(privateKey, provider);
+        const guardian = new ethers.Contract(guardianAddress, GUARDIAN_ABI, signer);
+        
+        console.log(`🛡️  Guardian contract: ${guardianAddress}`);
+        console.log(`📡 Executor address: ${signer.address}`);
+        
+        const results = {
+            executed: [],
+            skipped: [],
+            failed: []
+        };
+        
+        // Process each risk assessment
+        for (const assessment of riskAssessments) {
+            console.log(`\n🎯 Processing ${assessment.protocolName}...`);
+            console.log(`   Risk Score: ${assessment.riskScore}/10`);
+            console.log(`   Action: ${assessment.recommendedAction}`);
+            
+            // Skip if action is just monitoring
+            if (assessment.recommendedAction === 'MONITOR') {
+                console.log('   ⏭️  Skipping - monitoring only');
+                results.skipped.push({
+                    ...assessment,
+                    reason: 'MONITOR action - no withdrawal needed'
+                });
+                continue;
+            }
+            
+            // Skip if action is alert (dashboard notification only)
+            if (assessment.recommendedAction === 'ALERT') {
+                console.log('   📢 Skipping withdrawal - alert only');
+                results.skipped.push({
+                    ...assessment,
+                    reason: 'ALERT action - governance notification'
+                });
+                continue;
+            }
+            
+            // Check cooldown
+            const inCooldown = await isInCooldown(guardian, assessment.protocolAddress);
+            if (inCooldown) {
+                console.log('   ⏸️  Skipping - protocol in cooldown period');
+                results.skipped.push({
+                    ...assessment,
+                    reason: 'Cooldown period not elapsed'
+                });
+                continue;
+            }
+            
+            try {
+                // For demo purposes, assume we're withdrawing ETH (address(0) or WETH)
+                // In production, this would come from portfolio config
+                const tokenAddress = process.env.TOKEN_ADDRESS || ethers.ZeroAddress;
+                
+                // Get balance to determine withdrawal amount
+                let balance;
+                if (tokenAddress === ethers.ZeroAddress) {
+                    balance = await provider.getBalance(assessment.protocolAddress);
+                } else {
+                    balance = await getTokenBalance(provider, tokenAddress, assessment.protocolAddress);
+                }
+                
+                // Calculate withdrawal amount based on action
+                let withdrawalPercent = 100;
+                if (assessment.recommendedAction === 'PARTIAL_WITHDRAW') {
+                    withdrawalPercent = 80;
+                }
+                
+                const withdrawalAmount = (balance * BigInt(withdrawalPercent)) / 100n;
+                
+                if (withdrawalAmount === 0n) {
+                    console.log('   ⏭️  Skipping - no balance to withdraw');
+                    results.skipped.push({
+                        ...assessment,
+                        reason: 'No balance available'
+                    });
+                    continue;
+                }
+                
+                console.log(`   💰 Withdrawing ${ethers.formatEther(withdrawalAmount)} ETH (${withdrawalPercent}%)`);
+                
+                // Convert risk score to Guardian RiskLevel
+                const riskLevel = convertToRiskLevel(assessment.riskScore);
+                
+                // Execute emergency withdrawal
+                const tx = await guardian.emergencyWithdraw(
+                    assessment.protocolAddress,
+                    tokenAddress,
+                    withdrawalAmount,
+                    riskLevel
+                );
+                
+                console.log(`   📝 Transaction sent: ${tx.hash}`);
+                console.log('   ⏳ Waiting for confirmation...');
+                
+                const receipt = await tx.wait();
+                
+                console.log(`   ✅ Withdrawal executed successfully (Block ${receipt.blockNumber})`);
+                
+                results.executed.push({
+                    ...assessment,
+                    transactionHash: tx.hash,
+                    blockNumber: receipt.blockNumber,
+                    withdrawalAmount: ethers.formatEther(withdrawalAmount),
+                    withdrawalPercent: withdrawalPercent
+                });
+                
+            } catch (error) {
+                console.error(`   ❌ Execution failed: ${error.message}`);
+                results.failed.push({
+                    ...assessment,
+                    error: error.message
+                });
+            }
+        }
+        
+        console.log('\n📊 Execution Summary:');
+        console.log(`   ✅ Executed: ${results.executed.length}`);
+        console.log(`   ⏭️  Skipped: ${results.skipped.length}`);
+        console.log(`   ❌ Failed: ${results.failed.length}`);
+        
+        return results;
+        
+    } catch (error) {
+        console.error('❌ Response execution failed:', error.message);
+        return {
+            executed: [],
+            skipped: [],
+            failed: [{ error: error.message }]
+        };
+    }
 }
 
 // Standalone testing
 if (import.meta.url === `file://${process.argv[1]}`) {
     console.log('Testing Response Executor...');
-    executeResponse([]).catch(console.error);
+    
+    const mockRiskAssessments = [
+        {
+            daoName: 'Test DAO',
+            protocolName: 'Mock Protocol',
+            protocolAddress: '0x0000000000000000000000000000000000000001',
+            chain: 'arbitrum-sepolia',
+            riskScore: 9,
+            recommendedAction: 'EMERGENCY_WITHDRAW'
+        },
+        {
+            daoName: 'Test DAO',
+            protocolName: 'Safe Protocol',
+            protocolAddress: '0x0000000000000000000000000000000000000002',
+            chain: 'arbitrum-sepolia',
+            riskScore: 4,
+            recommendedAction: 'MONITOR'
+        }
+    ];
+    
+    executeResponse(mockRiskAssessments)
+        .then(result => {
+            console.log('\n📋 Execution Results:');
+            console.log(JSON.stringify(result, null, 2));
+        })
+        .catch(console.error);
 }

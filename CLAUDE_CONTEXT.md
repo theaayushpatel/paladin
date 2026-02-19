@@ -14,7 +14,7 @@ You are helping me build **Paladin Protocol**, an autonomous AI-powered defense 
 **Tech Stack:**
 - Smart Contracts: Solidity + Foundry
 - Orchestration: Chainlink CRE (Compute Runtime Environment)
-- AI Analysis: Anthropic Claude API
+- AI Analysis: Local Ollama (llama3.1:8b or similar)
 - Frontend: Next.js 14 + TypeScript + Tailwind + wagmi
 - Blockchain: Arbitrum Sepolia testnet
 
@@ -27,7 +27,7 @@ You are helping me build **Paladin Protocol**, an autonomous AI-powered defense 
 
 ### 2. CRE Workflow (`cre-workflow/`)
 - **exploitDetector.js**: Monitors blockchain, scores transactions for anomalies
-- **aiAnalyzer.js**: Calls Claude API to analyze exploits and extract patterns
+- **aiAnalyzer.js**: Calls local Ollama AI to analyze exploits and extract patterns
 - **portfolioScanner.js**: Checks all DAO protocols for similar vulnerabilities
 - **responseExecutor.js**: Executes emergency withdrawals via Guardian contract
 - **workflow.yaml**: Chainlink CRE configuration orchestrating all components
@@ -98,7 +98,8 @@ paladin-protocol/
 ```bash
 # .env (in root directory)
 ALCHEMY_API_KEY=
-ANTHROPIC_API_KEY=
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1:8b
 ETHERSCAN_API_KEY=
 ARBISCAN_API_KEY=
 DEPLOYER_PRIVATE_KEY=
@@ -209,10 +210,11 @@ You should:
 - All actions emit events
 
 ### AI Analyzer:
-- Sends transaction data + source code to Claude API
+- Sends transaction data + source code to local Ollama
 - Expects JSON response with specific schema
 - Confidence threshold: only act if >80%
 - Handles API failures gracefully
+- Runs completely locally (no API costs)
 
 ### Portfolio Scanner:
 - Fetches source code from Etherscan API
@@ -241,7 +243,19 @@ forge install OpenZeppelin/openzeppelin-contracts
 
 ### CRE Workflow:
 ```bash
-npm install @anthropic-ai/sdk ethers@6 axios dotenv
+npm install ethers@6 axios dotenv
+```
+
+### Ollama Setup:
+```bash
+# Install Ollama (https://ollama.ai)
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull model
+ollama pull llama3.1:8b
+
+# Start Ollama server
+ollama serve
 ```
 
 ### Dashboard:

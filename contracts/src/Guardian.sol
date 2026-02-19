@@ -5,6 +5,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IRiskRegistry} from "./interfaces/IRiskRegistry.sol";
 
 /**
  * @title Guardian
@@ -16,6 +17,9 @@ contract Guardian is AccessControl, ReentrancyGuard {
 
     /// @notice Role for CRE workflow to execute emergency actions
     bytes32 public constant CRE_WORKFLOW_ROLE = keccak256("CRE_WORKFLOW_ROLE");
+
+    /// @notice The Chronicle - records all threats and actions
+    IRiskRegistry public immutable riskRegistry;
 
     /// @notice Address where rescued funds are sent (immutable for security)
     address public immutable safeAddress;
@@ -64,18 +68,22 @@ contract Guardian is AccessControl, ReentrancyGuard {
 
     /**
      * @notice The Oath - Initialize the Guardian with sacred parameters
+     * @param _riskRegistry Address of The Chronicle (RiskRegistry)
      * @param _safeAddress Address where protected funds shall be sent
      * @param _cooldownPeriod Minimum time between consecutive withdrawals (seconds)
      * @param _maxWithdrawalBps Maximum withdrawal percentage in basis points
      */
     constructor(
+        address _riskRegistry,
         address _safeAddress,
         uint256 _cooldownPeriod,
         uint256 _maxWithdrawalBps
     ) {
+        if (_riskRegistry == address(0)) revert InvalidSafeAddress();
         if (_safeAddress == address(0)) revert InvalidSafeAddress();
         if (_maxWithdrawalBps > 10000) revert InvalidWithdrawalPercentage();
 
+        riskRegistry = IRiskRegistry(_riskRegistry);
         safeAddress = _safeAddress;
         cooldownPeriod = _cooldownPeriod;
         maxWithdrawalBps = _maxWithdrawalBps;
@@ -113,13 +121,31 @@ contract Guardian is AccessControl, ReentrancyGuard {
             withdrawalBps = maxWithdrawalBps;
         }
 
+        // Calculate actual withdrawal amount based on risk level
+        uint256 actualAmount = (amount * withdrawalBps) / 10000;
+        if (actualAmount == 0) actualAmount = amount; // If percentage is 0, still withdraw requested amount
+
         // Record the action
         lastWithdrawal[protocol] = block.timestamp;
 
         // Execute the withdrawal
-        IERC20(token).safeTransferFrom(protocol, safeAddress, amount);
+        IERC20(token).safeTransferFrom(protocol, safeAddress, actualAmount);
 
-        emit EmergencyWithdrawal(protocol, token, amount, riskLevel, block.timestamp);
+        // Record in The Chronicle
+        IRiskRegistry.ActionType actionType = withdrawalBps > 0 
+            ? IRiskRegistry.ActionType.WITHDRAWAL 
+            : IRiskRegistry.ActionType.ALERT;
+        
+        riskRegistry.recordThreat(
+            protocol,
+            token,
+            actualAmount,
+            _convertRiskLevel(riskLevel),
+            actionType,
+            string(abi.encodePacked("Emergency action: ", _getRiskLevelString(riskLevel)))
+        );
+
+        emit EmergencyWithdrawal(protocol, token, actualAmount, riskLevel, block.timestamp);
     }
 
     /**
@@ -162,5 +188,29 @@ contract Guardian is AccessControl, ReentrancyGuard {
         if (riskLevel == RiskLevel.HIGH) return 8000;      // 80%
         if (riskLevel == RiskLevel.MEDIUM) return 0;       // No withdrawal, only alert
         return 0;                                           // LOW: No withdrawal
+    }
+
+    /**
+     * @notice Convert Guardian RiskLevel to IRiskRegistry RiskLevel
+     * @param riskLevel Guardian's risk level
+     * @return IRiskRegistry's risk level
+     */
+    function _convertRiskLevel(RiskLevel riskLevel) internal pure returns (IRiskRegistry.RiskLevel) {
+        if (riskLevel == RiskLevel.CRITICAL) return IRiskRegistry.RiskLevel.CRITICAL;
+        if (riskLevel == RiskLevel.HIGH) return IRiskRegistry.RiskLevel.HIGH;
+        if (riskLevel == RiskLevel.MEDIUM) return IRiskRegistry.RiskLevel.MEDIUM;
+        return IRiskRegistry.RiskLevel.LOW;
+    }
+
+    /**
+     * @notice Get string representation of risk level
+     * @param riskLevel The risk level
+     * @return String name of the risk level
+     */
+    function _getRiskLevelString(RiskLevel riskLevel) internal pure returns (string memory) {
+        if (riskLevel == RiskLevel.CRITICAL) return "CRITICAL";
+        if (riskLevel == RiskLevel.HIGH) return "HIGH";
+        if (riskLevel == RiskLevel.MEDIUM) return "MEDIUM";
+        return "LOW";
     }
 }

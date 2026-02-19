@@ -2,7 +2,7 @@
 
 **Autonomous AI-powered DeFi defense system**
 
-Paladin Protocol monitors blockchains for DeFi exploits, uses Claude AI to analyze vulnerability patterns, scans entire protocol portfolios for similar weaknesses, and automatically withdraws funds from vulnerable protocols in under 30 seconds—all before copycat attacks occur.
+Paladin Protocol monitors blockchains for DeFi exploits, uses local Ollama AI to analyze vulnerability patterns, scans entire protocol portfolios for similar weaknesses, and automatically withdraws funds from vulnerable protocols in under 30 seconds—all before copycat attacks occur.
 
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 ![Solidity](https://img.shields.io/badge/solidity-0.8.20-blue)
@@ -17,7 +17,7 @@ Paladin Protocol monitors blockchains for DeFi exploits, uses Claude AI to analy
 
 ### CRE Workflow (`cre-workflow/`)
 - **exploitDetector.js** - Monitors blockchain, scores transactions for anomalies
-- **aiAnalyzer.js** - Calls Claude API to analyze exploits and extract patterns
+- **aiAnalyzer.js** - Calls local Ollama AI to analyze exploits and extract patterns
 - **portfolioScanner.js** - Checks all DAO protocols for similar vulnerabilities
 - **responseExecutor.js** - Executes emergency withdrawals via Guardian contract
 
@@ -32,19 +32,24 @@ Paladin Protocol monitors blockchains for DeFi exploits, uses Claude AI to analy
 
 - [Node.js](https://nodejs.org/) >= 18.0.0
 - [Foundry](https://book.getfoundry.sh/getting-started/installation)
+- [Ollama](https://ollama.com) for local AI analysis
 - Testnet ETH on Arbitrum Sepolia
 
 ### 1. Environment Setup
 
 ```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.1:8b
+ollama serve  # Run in separate terminal
+
 # Copy environment template
 cp .env.example .env
 
 # Edit .env and add your API keys:
 # - ALCHEMY_API_KEY
-# - ANTHROPIC_API_KEY
-# - ETHERSCAN_API_KEY
-# - ARBISCAN_API_KEY
+# - ETHERSCAN_API_KEY (optional)
+# - ARBISCAN_API_KEY (optional)
 # - DEPLOYER_PRIVATE_KEY
 ```
 

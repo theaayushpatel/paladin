@@ -38,6 +38,7 @@ contract Deploy is Script {
         // 2. Deploy Guardian (The Sword)
         console.log("Deploying Guardian...");
         Guardian guardian = new Guardian(
+            address(riskRegistry),
             safeAddress,
             DEFAULT_COOLDOWN,
             DEFAULT_MAX_WITHDRAWAL_BPS

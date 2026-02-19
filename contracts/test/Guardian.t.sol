@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Guardian} from "../src/Guardian.sol";
+import {RiskRegistry} from "../src/RiskRegistry.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockERC20 is IERC20 {
@@ -52,6 +53,7 @@ contract MockERC20 is IERC20 {
  */
 contract GuardianTest is Test {
     Guardian public guardian;
+    RiskRegistry public riskRegistry;
     MockERC20 public token;
     
     address public admin = address(1);
@@ -73,11 +75,16 @@ contract GuardianTest is Test {
     function setUp() public {
         vm.startPrank(admin);
         
-        guardian = new Guardian(safeAddress, COOLDOWN, MAX_WITHDRAWAL_BPS);
+        // Deploy RiskRegistry first
+        riskRegistry = new RiskRegistry();
+        
+        // Deploy Guardian with RiskRegistry
+        guardian = new Guardian(address(riskRegistry), safeAddress, COOLDOWN, MAX_WITHDRAWAL_BPS);
         token = new MockERC20();
         
-        // Grant CRE_WORKFLOW_ROLE to creWorkflow address
+        // Grant roles
         guardian.grantRole(guardian.CRE_WORKFLOW_ROLE(), creWorkflow);
+        riskRegistry.grantRole(riskRegistry.GUARDIAN_ROLE(), address(guardian));
         
         // Setup protocol with tokens
         token.mint(protocol, 1000 ether);
@@ -89,16 +96,17 @@ contract GuardianTest is Test {
         assertEq(guardian.safeAddress(), safeAddress);
         assertEq(guardian.cooldownPeriod(), COOLDOWN);
         assertEq(guardian.maxWithdrawalBps(), MAX_WITHDRAWAL_BPS);
+        assertEq(address(guardian.riskRegistry()), address(riskRegistry));
     }
 
     function testConstructorRevertsInvalidSafeAddress() public {
         vm.expectRevert(Guardian.InvalidSafeAddress.selector);
-        new Guardian(address(0), COOLDOWN, MAX_WITHDRAWAL_BPS);
+        new Guardian(address(riskRegistry), address(0), COOLDOWN, MAX_WITHDRAWAL_BPS);
     }
 
     function testConstructorRevertsInvalidWithdrawalPercentage() public {
         vm.expectRevert(Guardian.InvalidWithdrawalPercentage.selector);
-        new Guardian(safeAddress, COOLDOWN, 10001); // Over 100%
+        new Guardian(address(riskRegistry), safeAddress, COOLDOWN, 10001); // Over 100%
     }
 
     function testEmergencyWithdrawCritical() public {

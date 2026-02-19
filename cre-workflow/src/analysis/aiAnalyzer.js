@@ -1,7 +1,7 @@
 /**
  * AI Analyzer - Divine Sight
  * 
- * Uses Ollama AI to analyze exploit transactions and extract vulnerability patterns.
+ * Uses local Ollama AI to analyze exploit transactions and extract vulnerability patterns.
  * Returns structured analysis with confidence scores and recommended actions.
  */
 
@@ -10,10 +10,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3:8b';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
 
 /**
- * Calls Ollama API for chat completion
+ * Calls Ollama API for analysis
  * @param {string} prompt - The prompt to send to Ollama
  * @returns {Promise<string>} The AI response
  */
@@ -31,6 +31,7 @@ async function callOllama(prompt) {
                 options: {
                     temperature: 0.3, // Lower temperature for more focused analysis
                     top_p: 0.9,
+                    num_predict: 512, // Limit response length
                 }
             })
         });
@@ -48,7 +49,7 @@ async function callOllama(prompt) {
 }
 
 /**
- * Analyzes an exploit using Ollama AI
+ * Analyzes an exploit using local Ollama AI
  * @param {Object} transaction - The suspicious transaction to analyze
  * @returns {Object} AI analysis with patterns, confidence, and recommendations
  */
@@ -67,7 +68,8 @@ Gas Used: ${transaction.gasUsed || 'N/A'}
 Status: ${transaction.status || 'N/A'}
 Anomaly Score: ${transaction.anomalyScore || 0}/10
 
-${transaction.logs ? `Transaction Logs: ${JSON.stringify(transaction.logs, null, 2)}` : ''}
+${transaction.logs ? `Transaction Logs (${transaction.logs.length} events):
+${JSON.stringify(transaction.logs.slice(0, 5), null, 2)}` : ''}
 
 TASK:
 Analyze this transaction and provide a structured JSON response with:
@@ -75,10 +77,10 @@ Analyze this transaction and provide a structured JSON response with:
 1. exploitType: Type of exploit detected (e.g., "reentrancy", "flash-loan", "price-manipulation", "access-control", "integer-overflow", "none")
 2. confidence: Confidence score from 0-100
 3. vulnerabilityPattern: Technical description of the vulnerability pattern
-4. affectedComponents: List of contract components that could be vulnerable
+4. affectedComponents: List of contract components that could be vulnerable (array of strings)
 5. riskLevel: Risk level from 1-10
 6. recommendedAction: "EMERGENCY_WITHDRAW" | "PARTIAL_WITHDRAW" | "ALERT" | "MONITOR"
-7. reasoning: Brief explanation of your analysis
+7. reasoning: Brief explanation of your analysis (2-3 sentences)
 
 Respond ONLY with valid JSON, no additional text.`;
 
@@ -108,17 +110,21 @@ Respond ONLY with valid JSON, no additional text.`;
             recommendedAction: analysis.recommendedAction || 'MONITOR',
             reasoning: analysis.reasoning || 'Analysis completed',
             analysisTime: analysisTime,
-            model: OLLAMA_MODEL
+            model: OLLAMA_MODEL,
+            provider: 'ollama-local'
         };
 
         console.log(`✅ Exploit Type: ${normalizedAnalysis.exploitType}`);
         console.log(`📊 Risk Level: ${normalizedAnalysis.riskLevel}/10`);
-        console.log(`🎯 Action: ${normalizedAnalysis.recommendedAction}`);
+        console.log(`🎯 Confidence: ${normalizedAnalysis.confidence}%`);
+        console.log(`⚔️  Action: ${normalizedAnalysis.recommendedAction}`);
 
         return normalizedAnalysis;
 
     } catch (error) {
         console.error('❌ AI analysis failed:', error.message);
+        console.error('💡 Make sure Ollama is running: ollama serve');
+        console.error(`💡 Make sure model is installed: ollama pull ${OLLAMA_MODEL}`);
         return createFallbackAnalysis(transaction);
     }
 }
@@ -162,18 +168,20 @@ function createFallbackAnalysis(transaction) {
 // Standalone testing
 if (import.meta.url === `file://${process.argv[1]}`) {
     console.log('🧪 Testing AI Analyzer with Ollama...\n');
+    console.log(`⚙️  Make sure Ollama is running: ollama serve`);
+    console.log(`⚙️  Model required: ${OLLAMA_MODEL}\n`);
     
     const mockTransaction = {
-        hash: '0x123abc...',
-        from: '0xAttacker...',
+        hash: '0x123abc456def789...',
+        from: '0xAttacker123...',
         to: '0xVulnerableContract...',
         value: '1000',
         gasUsed: '500000',
-        status: 'success',
+        status: 1,
         anomalyScore: 9.2,
         logs: [
-            { event: 'Transfer', data: '1000 ETH' },
-            { event: 'Withdrawal', data: 'Reentrancy detected' }
+            { address: '0xToken...', topics: ['0xddf...'], data: '0x...' },
+            { address: '0xVault...', topics: ['0x8c5...'], data: '0x...' }
         ]
     };
 
