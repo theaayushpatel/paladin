@@ -3,15 +3,15 @@
   "portfolios": [
     {
       "daoName": "Example DAO",
-      "daoAddress": "0x0000000000000000000000000000000000000000",
+      "daoAddress": "0x21938d5fACb257D7314859c8A98EA58fD27e70Fa",
       "protocols": [
         {
           "name": "Vulnerable Protocol",
-          "address": "0x0000000000000000000000000000000000000000",
+          "address": "0x67cd4c8051f7d38b1acf7ad09318dc8909c2644a",
           "chain": "arbitrum-sepolia",
           "tvl": "1000000",
           "criticality": "high",
-          "withdrawalAddress": "0x0000000000000000000000000000000000000000"
+          "withdrawalAddress": "0x21938d5fACb257D7314859c8A98EA58fD27e70Fa"
         }
       ]
     }
