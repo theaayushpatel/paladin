@@ -4,12 +4,6 @@
 
 Paladin Protocol monitors blockchains for DeFi exploits, uses local Ollama AI to analyze vulnerability patterns, scans entire protocol portfolios for similar weaknesses, and automatically withdraws funds from vulnerable protocols in under 30 seconds—all before copycat attacks occur.
 
-![Status](https://img.shields.io/badge/status-deployed-brightgreen)
-![Solidity](https://img.shields.io/badge/solidity-0.8.20-blue)
-![Next.js](https://img.shields.io/badge/next.js-14-black)
-![Tests](https://img.shields.io/badge/tests-41%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-100%25%20lines-brightgreen)
-
 ## 🏗️ Architecture
 
 ### Smart Contracts (`contracts/`)
@@ -252,46 +246,6 @@ npm run test:analyzer
    npm run build
    npm run start
    ```
-
-## 🗺️ Development Roadmap
-
-### Phase 1: Smart Contracts ✅ (In Progress)
-- [ ] Guardian.sol implementation
-- [ ] RiskRegistry.sol implementation
-- [ ] VulnerableProtocol.sol mock
-- [ ] Comprehensive test suite
-- [ ] Deployment scripts
-
-### Phase 2: CRE Workflow
-- [ ] Exploit detector implementation
-- [ ] Claude AI analyzer integration
-- [ ] Portfolio scanner with code similarity
-- [ ] Response executor with Guardian integration
-- [ ] CRE workflow configuration
-
-### Phase 3: Dashboard
-- [ ] Protocol health cards
-- [ ] Risk timeline visualization
-- [ ] Alert center
-- [ ] Wallet connection
-- [ ] Real-time event monitoring
-
-### Phase 4: Testing & Deployment
-- [ ] End-to-end testing
-- [ ] Testnet deployment
-- [ ] Security audit
-- [ ] Documentation
-- [ ] Mainnet launch
-
-## 📝 License
-
-MIT
-
-## 🤝 Contributing
-
-This project is currently in active development. Contributions welcome!
-
----
 
 **Built with:** Solidity • Foundry • Chainlink CRE • Claude AI • Next.js 14 • TypeScript • Tailwind CSS
 
