@@ -25,11 +25,11 @@ interface Protocol {
 const DEFAULT_PROTOCOLS: Protocol[] = [
   {
     name: 'Vulnerable Protocol',
-    address: '0x67cd4c8051f7d38b1acf7ad09318dc8909c2644a',
-    tvl: '1,000,000',
-    riskScore: 8,
+    address: '0x642f1bd9490C2A87C8Cd891E8E2F5EcB8cC03D45',
+    tvl: '300',
+    riskScore: 1,
     lastCheck: new Date(0),  // stable on server; updated after mount
-    status: 'warning',
+    status: 'safe',
   },
 ];
 
@@ -56,14 +56,14 @@ export default function Home() {
   const { data: eventCount, refetch: refetchCount } = useReadContract({
     ...contracts.riskRegistry,
     functionName: 'eventCount',
-    query: { refetchInterval: 30000 },
+    query: { refetchInterval: 30000, staleTime: 0, gcTime: 0 },
   });
 
   const { data: recentEventsRaw, refetch: refetchEvents } = useReadContract({
     ...contracts.riskRegistry,
     functionName: 'getRecentEvents',
     args: [BigInt(0), BigInt(20)],
-    query: { refetchInterval: 30000 },
+    query: { refetchInterval: 30000, staleTime: 0, gcTime: 0 },
   });
 
   function handleRefresh() {
@@ -72,6 +72,37 @@ export default function Home() {
     setLastRefresh(new Date());
     setProtocols((prev) => prev.map((p) => ({ ...p, lastCheck: new Date() })));
   }
+
+  // ── Sync protocol risk scores from on-chain events ────────────────────────
+  useEffect(() => {
+    if (!recentEventsRaw) return;
+    const events = recentEventsRaw as any[];
+    const RISK_ORDER = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+    const riskScoreMap: Record<string, number> = { LOW: 2, MEDIUM: 5, HIGH: 7, CRITICAL: 9 };
+    const statusMap: Record<string, 'safe' | 'warning' | 'critical'> = {
+      LOW: 'safe', MEDIUM: 'warning', HIGH: 'warning', CRITICAL: 'critical',
+    };
+
+    setProtocols((prev) =>
+      prev.map((p) => {
+        const protocolEvents = events.filter(
+          (e: any) => (e.protocol as string).toLowerCase() === p.address.toLowerCase()
+        );
+        if (!protocolEvents.length) return { ...p, riskScore: 1, status: 'safe' as const };
+
+        const worstLevel = protocolEvents.reduce((worst: string, e: any) => {
+          const level = RISK_LEVEL_LABELS[Number(e.riskLevel)] ?? 'LOW';
+          return RISK_ORDER.indexOf(level) > RISK_ORDER.indexOf(worst) ? level : worst;
+        }, 'LOW');
+
+        return {
+          ...p,
+          riskScore: riskScoreMap[worstLevel] ?? p.riskScore,
+          status: (statusMap[worstLevel] ?? p.status) as 'safe' | 'warning' | 'critical',
+        };
+      })
+    );
+  }, [recentEventsRaw]);
 
   // ── Map raw on-chain events ───────────────────────────────────────────────
   const timelineEvents = recentEventsRaw

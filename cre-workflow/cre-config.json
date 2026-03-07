@@ -1,7 +1,7 @@
 {
-  "riskRegistryAddress": "0x0988e36849863504d1db1e88eef5aef866ea3d79",
-  "guardianAddress": "0xa80f97675ff16407464b688cce4554f35a5a9214",
-  "vulnerableProtocolAddress": "0x67cd4c8051f7d38b1acf7ad09318dc8909c2644a",
+  "riskRegistryAddress": "0xA8b33811Ca32b280245E97248a32f708e46D473C",
+  "guardianAddress": "0x6c058BB98ef22770246338AD3393D7D1356d5f52",
+  "vulnerableProtocolAddress": "0x642f1bd9490C2A87C8Cd891E8E2F5EcB8cC03D45",
   "alchemyRpcUrl": "https://arb-sepolia.g.alchemy.com/v2/0s6zJM56Vbjn0n2d-s48o",
   "ollamaBaseUrl": "http://localhost:11434",
   "ollamaModel": "llama3.1:8b"

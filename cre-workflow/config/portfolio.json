@@ -7,11 +7,11 @@
       "protocols": [
         {
           "name": "Vulnerable Protocol",
-          "address": "0x67cd4c8051f7d38b1acf7ad09318dc8909c2644a",
+          "address": "0x642f1bd9490C2A87C8Cd891E8E2F5EcB8cC03D45",
           "chain": "arbitrum-sepolia",
           "tvl": "1000000",
           "criticality": "high",
-          "withdrawalAddress": "0x21938d5fACb257D7314859c8A98EA58fD27e70Fa"
+          "withdrawalAddress": "0x505a0beAd3b7782B5e3A7063Cc28eAB1597bA389"
         }
       ]
     }
