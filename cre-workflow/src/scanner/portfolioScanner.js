@@ -187,9 +187,30 @@ export async function scanPortfolio(exploitPattern, transactions = []) {
                     if (exploitPattern.sourceCode) {
                         similarityScore = calculateCodeSimilarity(sourceCode, exploitPattern.sourceCode);
                     }
-                    
+
+                    // AI deep dive when similarity > 70% (Paladin design spec)
+                    let aiConfidence = exploitPattern.confidence || 0;
+                    if (similarityScore > 0.7) {
+                        console.log(`    🔬 Similarity ${(similarityScore * 100).toFixed(0)}% — running AI deep dive…`);
+                        try {
+                            const deepDive = await analyzeExploit({
+                                hash: `static-analysis-${protocol.address.slice(0, 10)}`,
+                                from: 'N/A',
+                                to: protocol.address,
+                                value: '0',
+                                gasUsed: 'N/A',
+                                status: 1,
+                                anomalyScore: Math.max(vulnScore, 5),
+                                logs: [],
+                            });
+                            aiConfidence = deepDive.confidence;
+                            console.log(`    🤖 Deep dive: ${deepDive.exploitType} (confidence=${aiConfidence}%)`);
+                        } catch (err) {
+                            console.warn(`    ⚠️  AI deep dive failed: ${err.message}`);
+                        }
+                    }
+
                     // Calculate combined risk score
-                    const aiConfidence = exploitPattern.confidence || 0;
                     const riskScore = Math.min(10, Math.round(
                         (vulnScore * 0.4) + 
                         (similarityScore * 10 * 0.3) + 

@@ -121,15 +121,24 @@ contract Guardian is AccessControl, ReentrancyGuard {
             withdrawalBps = maxWithdrawalBps;
         }
 
-        // Calculate actual withdrawal amount based on risk level
-        uint256 actualAmount = (amount * withdrawalBps) / 10000;
-        if (actualAmount == 0) actualAmount = amount; // If percentage is 0, still withdraw requested amount
+        // Calculate actual withdrawal amount — only for HIGH/CRITICAL (withdrawalBps > 0).
+        // MEDIUM/LOW have withdrawalBps=0 → no transfer, only an ALERT is recorded.
+        uint256 actualAmount = 0;
+        if (withdrawalBps > 0) {
+            actualAmount = (amount * withdrawalBps) / 10000;
+            // Guard against integer rounding to zero when amount is very small
+            if (actualAmount == 0) actualAmount = amount;
+        }
 
-        // Record the action
-        lastWithdrawal[protocol] = block.timestamp;
+        // Update cooldown only when an actual withdrawal is executed
+        if (actualAmount > 0) {
+            lastWithdrawal[protocol] = block.timestamp;
+        }
 
-        // Execute the withdrawal
-        IERC20(token).safeTransferFrom(protocol, safeAddress, actualAmount);
+        // Execute the withdrawal (only for HIGH/CRITICAL)
+        if (actualAmount > 0) {
+            IERC20(token).safeTransferFrom(protocol, safeAddress, actualAmount);
+        }
 
         // Record in The Chronicle
         IRiskRegistry.ActionType actionType = withdrawalBps > 0 

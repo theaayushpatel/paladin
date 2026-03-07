@@ -28,7 +28,7 @@ const DEFAULT_PROTOCOLS: Protocol[] = [
     address: '0x67cd4c8051f7d38b1acf7ad09318dc8909c2644a',
     tvl: '1,000,000',
     riskScore: 8,
-    lastCheck: new Date(),
+    lastCheck: new Date(0),  // stable on server; updated after mount
     status: 'warning',
   },
 ];
@@ -46,6 +46,8 @@ export default function Home() {
   useEffect(() => {
     setCurrentTime(new Date());
     setLastRefresh(new Date());
+    // stamp all initial protocols with the real current time
+    setProtocols((prev) => prev.map((p) => ({ ...p, lastCheck: new Date() })));
     const t = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
@@ -85,7 +87,7 @@ export default function Home() {
 
   const recentAlerts = timelineEvents
     .filter((e) => e.riskLevel === 'HIGH' || e.riskLevel === 'CRITICAL')
-    .filter((e) => Date.now() - e.timestamp.getTime() < 3600000)
+    .filter((e) => Date.now() - e.timestamp.getTime() < 604800000) // 7 days
     .map((e, i) => ({
       id: i,
       protocol: e.protocol,

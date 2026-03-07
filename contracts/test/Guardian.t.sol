@@ -234,4 +234,116 @@ contract GuardianTest is Test {
         // Silence unused variable warning
         level;
     }
+
+    // ── MEDIUM/LOW: no token transfer, no cooldown stamp ──────────────────────
+
+    function testEmergencyWithdrawMediumNoTransfer() public {
+        uint256 amount = 100 ether;
+
+        vm.prank(protocol);
+        token.approve(address(guardian), type(uint256).max);
+
+        uint256 protocolBefore = token.balanceOf(protocol);
+        uint256 safeBefore     = token.balanceOf(safeAddress);
+
+        vm.prank(creWorkflow);
+        guardian.emergencyWithdraw(protocol, address(token), amount, Guardian.RiskLevel.MEDIUM);
+
+        // No tokens should move — MEDIUM = alert only
+        assertEq(token.balanceOf(protocol),     protocolBefore);
+        assertEq(token.balanceOf(safeAddress),  safeBefore);
+
+        // Cooldown must NOT be stamped (no withdrawal occurred)
+        assertEq(guardian.lastWithdrawal(protocol), 0);
+
+        // A MEDIUM ALERT event should still appear in The Chronicle
+        RiskRegistry.RiskEvent memory evt = riskRegistry.getEvent(1);
+        assertEq(uint8(evt.riskLevel),  uint8(RiskRegistry.RiskLevel.MEDIUM));
+        assertEq(uint8(evt.actionType), uint8(RiskRegistry.ActionType.ALERT));
+        assertEq(evt.amount, 0);
+    }
+
+    function testEmergencyWithdrawLowNoTransfer() public {
+        uint256 amount = 100 ether;
+
+        vm.prank(protocol);
+        token.approve(address(guardian), type(uint256).max);
+
+        uint256 protocolBefore = token.balanceOf(protocol);
+
+        vm.prank(creWorkflow);
+        guardian.emergencyWithdraw(protocol, address(token), amount, Guardian.RiskLevel.LOW);
+
+        // No tokens should move, cooldown not set
+        assertEq(token.balanceOf(protocol), protocolBefore);
+        assertEq(guardian.lastWithdrawal(protocol), 0);
+    }
+
+    function testEmergencyWithdrawHighTransfers80Percent() public {
+        uint256 amount = 100 ether;
+
+        vm.prank(protocol);
+        token.approve(address(guardian), amount);
+
+        vm.prank(creWorkflow);
+        guardian.emergencyWithdraw(protocol, address(token), amount, Guardian.RiskLevel.HIGH);
+
+        // HIGH = 80 %
+        assertEq(token.balanceOf(safeAddress), 80 ether);
+        assertEq(token.balanceOf(protocol),    920 ether); // 1000 - 80
+        assertTrue(guardian.lastWithdrawal(protocol) > 0);
+    }
+
+    function testEmergencyWithdrawMediumDoesNotBlockSubsequentWithdrawal() public {
+        uint256 amount = 100 ether;
+
+        vm.prank(protocol);
+        token.approve(address(guardian), type(uint256).max);
+
+        // MEDIUM call — no cooldown should be set
+        vm.prank(creWorkflow);
+        guardian.emergencyWithdraw(protocol, address(token), amount, Guardian.RiskLevel.MEDIUM);
+        assertEq(guardian.lastWithdrawal(protocol), 0);
+
+        // Immediate CRITICAL call should succeed (cooldown not active)
+        vm.prank(creWorkflow);
+        guardian.emergencyWithdraw(protocol, address(token), amount, Guardian.RiskLevel.CRITICAL);
+        assertEq(token.balanceOf(safeAddress), amount);
+    }
+
+    // Cover line 130: when amount is so small that (amount * withdrawalBps) / 10000 == 0
+    // the guard `if (actualAmount == 0) actualAmount = amount` kicks in.
+    // For HIGH (8000 bps): 1 wei * 8000 / 10000 = 0 → actualAmount becomes 1 wei.
+    function testEmergencyWithdrawAmountRoundingGuard() public {
+        uint256 tinyAmount = 1; // 1 wei — rounds to 0 after 80% bps math
+
+        vm.prank(protocol);
+        token.approve(address(guardian), tinyAmount);
+
+        vm.prank(creWorkflow);
+        guardian.emergencyWithdraw(protocol, address(token), tinyAmount, Guardian.RiskLevel.HIGH);
+
+        // The rounding guard kicks in: 1 wei is transferred whole rather than 0
+        assertEq(token.balanceOf(safeAddress), tinyAmount);
+    }
+
+    // Cover line 121: when withdrawalBps from riskLevel exceeds maxWithdrawalBps,
+    // it gets capped. CRITICAL returns 10000 bps — lower the cap to 5000 to trigger.
+    function testEmergencyWithdrawCapsAtMaxWithdrawalBps() public {
+        uint256 amount = 1000;
+        uint256 cappedBps = 5000; // lower than CRITICAL's 10000 or HIGH's 8000
+
+        // Admin lowers the cap before the withdrawal
+        vm.prank(admin);
+        guardian.setMaxWithdrawalBps(cappedBps);
+
+        vm.prank(protocol);
+        token.approve(address(guardian), amount);
+
+        vm.prank(creWorkflow);
+        guardian.emergencyWithdraw(protocol, address(token), amount, Guardian.RiskLevel.CRITICAL);
+
+        // Only cappedBps (50%) should be withdrawn, not the full 100%
+        assertEq(token.balanceOf(safeAddress), (amount * cappedBps) / 10000);
+    }
 }
