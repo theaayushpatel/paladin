@@ -2,7 +2,19 @@
 
 Complete setup instructions for running the Paladin Protocol autonomous defense system.
 
-## 🚀 Quick Start
+## � Deployed Contracts (Arbitrum Sepolia)
+
+| Contract | Address |
+|---|---|
+| Guardian | [`0xa80f97675ff16407464b688cce4554f35a5a9214`](https://sepolia.arbiscan.io/address/0xa80f97675ff16407464b688cce4554f35a5a9214) |
+| RiskRegistry | [`0x0988e36849863504d1db1e88eef5aef866ea3d79`](https://sepolia.arbiscan.io/address/0x0988e36849863504d1db1e88eef5aef866ea3d79) |
+| VulnerableProtocol | [`0x67cd4c8051f7d38b1acf7ad09318dc8909c2644a`](https://sepolia.arbiscan.io/address/0x67cd4c8051f7d38b1acf7ad09318dc8909c2644a) |
+
+> Chain ID: 421614 — Deployer wallet needs Arbitrum Sepolia ETH from the [Chainlink Faucet](https://faucets.chain.link/arbitrum-sepolia)
+
+---
+
+## �🚀 Quick Start
 
 ### Prerequisites
 
@@ -150,6 +162,14 @@ cast send $GUARDIAN_ADDRESS \
   $CRE_WORKFLOW_ADDRESS \
   --rpc-url $ARBITRUM_SEPOLIA_RPC \
   --private-key $DEPLOYER_PRIVATE_KEY
+
+# Grant GUARDIAN_ROLE on RiskRegistry so Guardian can write events
+cast send $RISK_REGISTRY_ADDRESS \
+  "grantRole(bytes32,address)" \
+  $(cast keccak "GUARDIAN_ROLE") \
+  $GUARDIAN_ADDRESS \
+  --rpc-url $ARBITRUM_SEPOLIA_RPC \
+  --private-key $DEPLOYER_PRIVATE_KEY
 ```
 
 #### 9. Test Individual Components
@@ -247,7 +267,7 @@ cd cre-workflow
 
 # Test each component
 npm run test:detector  # Blockchain monitoring
-npm run test:analyzer  # AI analysis (requires API key)
+npm run test:analyzer  # AI analysis (requires Ollama running: ollama serve)
 npm run test:scanner   # Portfolio scanning
 npm run test:executor  # Emergency response
 ```

@@ -36,7 +36,8 @@ contracts/
 ├── script/
 │   └── Deploy.s.sol
 ├── test/
-│   ├── Guardian.t.sol
-│   └── RiskRegistry.t.sol
+│   ├── Guardian.t.sol               # 19 tests
+│   ├── RiskRegistry.t.sol           # 14 tests
+│   └── VulnerableProtocol.t.sol     # 8 tests (incl. reentrancy attack demo)
 └── foundry.toml
 ```

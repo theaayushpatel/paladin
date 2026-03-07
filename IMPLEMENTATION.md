@@ -72,28 +72,26 @@ uint256 actualAmount = (amount * withdrawalBps) / 10000;
 }
 ```
 
-#### aiAnalyzer.js - Claude AI Integration 🤖
+#### aiAnalyzer.js - Ollama AI Integration 🤖
 **Status:** ✅ IMPLEMENTED
 
-**Changes:**
-- ❌ Removed Ollama local AI implementation
-- ✅ Added Anthropic Claude API integration
-- Uses `claude-sonnet-4-20250514` model
+**Features:**
+- Calls local Ollama API (`http://localhost:11434/api/generate`)
+- Uses `llama3.1:8b` model (configurable via `OLLAMA_MODEL` env var)
 - Structured JSON analysis output
-- Fallback analysis when API unavailable
-- Token usage tracking
+- Fallback heuristic analysis when Ollama is unavailable
+- Only acts when confidence ≥ 80% (per CLAUDE_CONTEXT spec)
 
 **Analysis Output:**
 ```json
 {
   "exploitType": "reentrancy",
-  "confidence": 85,
+  "confidence": 80,
   "vulnerabilityPattern": "...",
   "affectedComponents": [...],
   "riskLevel": 9,
   "recommendedAction": "EMERGENCY_WITHDRAW",
-  "reasoning": "...",
-  "model": "claude-sonnet-4"
+  "reasoning": "..."
 }
 ```
 
@@ -126,10 +124,11 @@ riskScore = (vulnerabilityScore * 0.4) +
 - Connects to Guardian contract
 - Checks cooldown periods
 - Validates protocol balances
-- Executes emergency withdrawals based on risk level
-- Handles both ETH and ERC20 tokens
+- Executes emergency withdrawals based on risk level (ERC20 tokens only)
 - Comprehensive error handling and logging
 - Returns detailed execution results
+
+**Note:** Guardian is ERC20-only (`safeTransferFrom`). ETH protocol withdrawals are not supported and will fail gracefully. The demo pipeline (`demo-exploit.js`) records threats directly via `recordThreat()`, bypassing this limitation.
 
 **Actions by Risk:**
 - Score 9-10: EMERGENCY_WITHDRAW (100%)
@@ -181,11 +180,16 @@ riskScore = (vulnerabilityScore * 0.4) +
 - Scrollable timeline
 
 **4. AlertCenter.tsx**
-- Active alert count
-- Critical/High alert statistics
+- Active alert count with 7-day rolling window
+- Critical/High/Medium/Low severity counters
 - Alert severity indicators
-- Real-time status updates
+- Dismiss-per-session support
 - Scrollable alert list
+
+**5. ManualScan.tsx**
+- Address lookup against onchain events
+- Manual `recordThreat()` form for operators
+- Direct RiskRegistry write via wagmi
 
 #### Main Page 📊
 **Status:** ✅ IMPLEMENTED
@@ -194,9 +198,9 @@ riskScore = (vulnerabilityScore * 0.4) +
 - Live system clock
 - Status banner (operational/offline)
 - Protected protocols grid
-- Alert center
-- Risk timeline
-- Mock data (ready for blockchain integration)
+- Alert center (7-day rolling window)
+- Risk timeline (onchain events via `getRecentEvents`, 30s poll)
+- Live blockchain data (no mock data)
 
 **Layout:**
 - Responsive grid system
@@ -243,13 +247,13 @@ riskScore = (vulnerabilityScore * 0.4) +
 #### CRE Workflow Package Updates 📦
 **Status:** ✅ UPDATED
 
-**Added:**
-- `@anthropic-ai/sdk: ^0.30.0` (Claude AI)
-
-**Existing:**
+**Dependencies:**
 - `ethers: ^6.13.0`
 - `axios: ^1.7.0`
 - `dotenv: ^16.4.0`
+- `@chainlink/cre-sdk: ^1.1.3`
+
+> AI analysis uses local **Ollama** (no additional npm packages required)
 
 ---
 
@@ -284,15 +288,16 @@ riskScore = (vulnerabilityScore * 0.4) +
 
 ### CRE Workflow
 - ✅ Exploit detector ready for testing
-- ✅ AI analyzer ready (requires API key)
-- ✅ Portfolio scanner ready
-- ✅ Response executor ready
+- ✅ AI analyzer ready (requires Ollama running: `ollama serve`)
+- ✅ Portfolio scanner ready (AI deep dive at similarity > 70%)
+- ✅ Response executor ready (ERC20 tokens)
 
 ### Dashboard
-- ✅ Components created with mock data
+- ✅ All 5 components created and functional
 - ✅ Providers configured
-- ✅ ABIs generated
-- ⚠️  Needs blockchain data integration
+- ✅ ABIs generated (6-arg `recordThreat`, 9-field `getRecentEvents`)
+- ✅ Live blockchain data (30s poll via wagmi)
+- ✅ 10+ onchain events visible in Chronicle
 
 ---
 
@@ -302,17 +307,17 @@ riskScore = (vulnerabilityScore * 0.4) +
 - Smart contract architecture
 - Access control patterns
 - Risk level thresholds
-- AI provider (Claude, not Ollama)
+- AI provider (Ollama local, no API costs)
 - Paladin theme and naming
 - Error handling patterns
 - Documentation
+- 100% line coverage on all contracts (41 tests)
+- Live blockchain integration on Arbitrum Sepolia
 
 ### ⚠️ Needs Next Steps:
-- Foundry installation (for testing)
-- Contract deployment to testnet
-- CRE workflow deployment to Chainlink
-- Dashboard blockchain integration
-- Real portfolio configuration
+- CRE workflow deployment to Chainlink DON
+- Real portfolio configuration with production addresses
+- Faucet ETH replenishment when deployer balance drops low
 
 ---
 
@@ -326,10 +331,10 @@ riskScore = (vulnerabilityScore * 0.4) +
 
 ### Functionality:
 1. Complete exploit detection pipeline
-2. Claude AI integration for analysis
-3. Portfolio vulnerability scanning
-4. Automated emergency response
-5. Professional dashboard UI
+2. Ollama AI integration for local analysis
+3. Portfolio vulnerability scanning with AI deep dive (>70% similarity)
+4. Automated emergency response (ERC20 protocols)
+5. Professional dashboard UI with live onchain data
 
 ### Developer Experience:
 1. Comprehensive setup guide

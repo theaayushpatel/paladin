@@ -27,12 +27,14 @@ npm start
 
 ## Environment Variables
 
-Create `.env.local` with:
+Create `.env` with:
 
 ```
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
 NEXT_PUBLIC_GUARDIAN_ADDRESS=0x...
 NEXT_PUBLIC_RISK_REGISTRY_ADDRESS=0x...
+NEXT_PUBLIC_CHAIN_ID=421614
+NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC=https://arb-sepolia.g.alchemy.com/v2/YOUR_KEY
 ```
 
 ## Structure
@@ -48,7 +50,8 @@ dashboard/
 │   ├── Header.tsx
 │   ├── ProtocolCard.tsx
 │   ├── RiskTimeline.tsx
-│   └── AlertCenter.tsx
+│   ├── AlertCenter.tsx
+│   └── ManualScan.tsx
 └── lib/
     ├── wagmi.ts
     └── contracts.ts

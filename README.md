@@ -4,9 +4,11 @@
 
 Paladin Protocol monitors blockchains for DeFi exploits, uses local Ollama AI to analyze vulnerability patterns, scans entire protocol portfolios for similar weaknesses, and automatically withdraws funds from vulnerable protocols in under 30 seconds—all before copycat attacks occur.
 
-![Status](https://img.shields.io/badge/status-in%20development-yellow)
+![Status](https://img.shields.io/badge/status-deployed-brightgreen)
 ![Solidity](https://img.shields.io/badge/solidity-0.8.20-blue)
 ![Next.js](https://img.shields.io/badge/next.js-14-black)
+![Tests](https://img.shields.io/badge/tests-41%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-100%25%20lines-brightgreen)
 
 ## 🏗️ Architecture
 
@@ -111,8 +113,9 @@ paladin-protocol/
 │   ├── script/
 │   │   └── Deploy.s.sol         # Deployment script
 │   └── test/
-│       ├── Guardian.t.sol       # Guardian tests
-│       └── RiskRegistry.t.sol   # RiskRegistry tests
+│       ├── Guardian.t.sol           # Guardian tests (19 tests)
+│       ├── RiskRegistry.t.sol       # RiskRegistry tests (14 tests)
+│       └── VulnerableProtocol.t.sol # VulnerableProtocol tests (8 tests)
 │
 ├── cre-workflow/                # Chainlink CRE workflow
 │   ├── package.json
@@ -139,10 +142,11 @@ paladin-protocol/
     │   ├── page.tsx
     │   └── globals.css
     ├── components/
-    │   ├── Header.tsx           # (to be created)
-    │   ├── ProtocolCard.tsx     # (to be created)
-    │   ├── RiskTimeline.tsx     # (to be created)
-    │   └── AlertCenter.tsx      # (to be created)
+    │   ├── Header.tsx           # Navigation + wallet connection
+    │   ├── ProtocolCard.tsx     # Protocol health card with risk score
+    │   ├── RiskTimeline.tsx     # The Chronicle — onchain event timeline
+    │   ├── AlertCenter.tsx      # Active alert aggregation
+    │   └── ManualScan.tsx       # Manual protocol scan + threat recording
     └── lib/
         ├── wagmi.ts             # Wallet config
         └── contracts.ts         # Contract ABIs

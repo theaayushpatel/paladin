@@ -177,7 +177,7 @@ ollama pull mistral:7b
 If AI returns invalid JSON:
 1. Paladin automatically falls back to heuristic analysis
 2. Try different model: `codellama:13b` is better at structured output
-3. Increase temperature in `aiAnalyzer.js` (makes output more deterministic)
+4. Decrease temperature in `aiAnalyzer.js` (lower = more deterministic output)
 
 ## ⚡ Performance Optimization
 
